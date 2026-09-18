@@ -73,12 +73,30 @@ jobs:
       - name: Verify bundled MPV native assets
         run: bash scripts/verify_mpv_native_assets.sh --require-elf
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android packages
+      - name: Setup Android SDK manually
         run: |
-          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+          echo "Using runner Android SDK"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | head -n 1 || true)
+          fi
+
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "sdkmanager not found"
+            find "$ANDROID_HOME" -name sdkmanager -print || true
+            exit 1
+          fi
+
+          echo "Using sdkmanager: $SDKMANAGER"
+
+          mkdir -p "$ANDROID_HOME/licenses"
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME"             "platform-tools"             "platforms;android-35"             "build-tools;35.0.0"
+
 
       - name: Run WebSocket danmaku tests
         run: |
